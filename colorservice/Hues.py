@@ -4,8 +4,8 @@ _huesByDegrees = IntervalTree()
 
 # NOTE: Ranges are inclusive of lower but exclusive of upper
 
-_huesByDegrees.addi(0, 16, 'red')
-_huesByDegrees.addi(16, 46, 'orange')
+_huesByDegrees.addi(0, 31, 'red')
+_huesByDegrees.addi(31, 46, 'orange')
 _huesByDegrees.addi(46, 76, 'yellow')
 _huesByDegrees.addi(76, 106, 'light green')
 _huesByDegrees.addi(106, 136, 'green')

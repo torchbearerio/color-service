@@ -1,4 +1,4 @@
-name: torchbearer-services
+name: color-service
 channels:
 - !!python/unicode
   'menpo'
@@ -119,16 +119,35 @@ dependencies:
   'tbb=4.3_20141023'
 - pip:
   - algorithmia==1.0.7
+  - aniso8601==1.2.1
   - backports.shutil-get-terminal-size==1.0.0
+  - boto==2.46.1
   - boto3==1.4.4
   - botocore==1.5.39
+  - bz2file==0.98
+  - colormath==2.1.1
+  - colorthief==0.2.1
   - docutils==0.13.1
+  - flask==0.10.1
+  - flask-restful==0.2.12
   - futures==3.1.1
+  - gensim==0.12.3
+  - intervaltree==2.1.0
   - ipython-genutils==0.2.0
+  - itsdangerous==0.24
+  - jinja2==2.9.6
   - jmespath==0.9.2
+  - markupsafe==1.0
   - mysql-python==1.2.5
+  - networkx==1.11
   - olefile==0.44
   - pillow==4.1.0
   - prompt-toolkit==1.0.14
+  - protobuf==3.3.0
+  - pyclustering==0.6.6
   - s3transfer==0.1.10
-prefix: !!python/unicode '/Users/fredricvollmer/anaconda/envs/torchbearer-services'
+  - smart-open==1.5.2
+  - sortedcontainers==1.5.7
+  - webcolors==1.7
+  - werkzeug==0.12.1
+prefix: !!python/unicode '/Users/fredricvollmer/anaconda/envs/color-service'

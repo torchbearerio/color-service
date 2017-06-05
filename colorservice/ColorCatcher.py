@@ -72,7 +72,7 @@ class ColorCatcher(Task.Task):
             else:
                 break
 
-        color_names = map(lambda color: ColorCatcher.get_color_name(color), best_clustering)
+        color_names = set(map(lambda color: ColorCatcher.get_color_name(color), best_clustering))
 
         return color_names
 
