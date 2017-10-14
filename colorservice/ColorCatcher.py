@@ -4,21 +4,21 @@ from pythoncore.AWS import AWSClient
 from PIL import Image
 import math
 import numpy as np
-from scipy.spatial import distance
 from colorthief import ColorThief
 import cv2
-import webcolors
 from colormath.color_conversions import convert_color
 from colormath.color_diff import delta_e_cie1976
 from colormath.color_objects import LabColor, sRGBColor, HSLColor
 import Hues
 import traceback
 import io
+import os
 
 
 class ColorCatcher(Task.Task):
     def __init__(self, ep_id, hit_id, task_token):
         super(ColorCatcher, self).__init__(ep_id, hit_id, task_token)
+        self.streetview_images = dict()
 
     def run(self):
         # Create DB session
@@ -30,10 +30,17 @@ class ColorCatcher(Task.Task):
             landmarks = hit.candidate_landmarks
 
             for landmark in landmarks:
-                # Load transparent cropped landmark image (as file)
-                image = self._get_landmark_image(landmark.landmark_id)
+                colors = []
 
-                colors = self.get_dominant_colors(image)
+                if not self.streetview_images.get(landmark.position):
+                    self.streetview_images[landmark.position] = self._get_streetview_image(landmark.position)
+
+                # Load transparent cropped landmark image (as file)
+                image = self._get_landmark_image(landmark)
+
+                # Make sure image is not entirely transparent (meaning we couldn't find a foreground object)
+                if self.image_is_valid(Image.open(image), quality=10):
+                    colors = self.get_dominant_colors(image)
 
                 landmark.set_colors(colors)
 
@@ -46,9 +53,10 @@ class ColorCatcher(Task.Task):
         except Exception, e:
             traceback.print_exc()
             session.rollback()
-            self.send_failure('COLOR SERVICE ERROR', 'Unable to complete the color description task.')
+            self.send_failure('COLOR SERVICE ERROR', e.message)
 
     @staticmethod
+    # Image is a BytesIO file-like object. Color-Thief will open it with PIL.
     def get_dominant_colors(image):
         # Find best value of n between (1, 3)
         ct = ColorThief(image)
@@ -76,17 +84,57 @@ class ColorCatcher(Task.Task):
 
         return color_names
 
-    # Note: Returns the image as a binary file, directly from S3. Does NOT convert to np array
-    @staticmethod
-    def _get_landmark_image(landmark_id):
+    def _get_streetview_image(self, position):
         client = AWSClient.get_client('s3')
         response = client.get_object(
-            Bucket=Constants.S3_BUCKETS['TRANSPARENT_CROPPED_IMAGES'],
-            Key="{0}.png".format(landmark_id)
+            Bucket=Constants.S3_BUCKETS['STREETVIEW_IMAGES'],
+            Key="{}_{}.jpg".format(self.ep_id, position)
         )
-        image = io.BytesIO(response.get("Body").read())
-        return image
-        # img.show()
+        return Image.open(response['Body'])
+
+    # Note: Returns the image as a binary file, directly from S3. Does NOT convert to np array
+    def _get_landmark_image(self, landmark):
+        img = self.streetview_images[landmark.position]
+
+        rect = landmark.get_rect()
+        rect = (rect['x1'], rect['y1'], rect['x2'], rect['y2'])
+
+        # Perform image segmentation to extract foreground object
+        cv_img = np.asarray(img, np.uint8)
+        # Convert to BGR
+        cv_img = cv_img[:, :, ::-1].copy()
+
+        mask = np.zeros(cv_img.shape[:2], np.uint8)
+        bgdModel = np.zeros((1, 65), np.float64)
+        fgdModel = np.zeros((1, 65), np.float64)
+
+        cv2.grabCut(cv_img, mask, rect, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_RECT)
+
+        # If mask==2 or mask== 1, mask2 get 0, other wise it gets 1 as 'uint8' type.
+        mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+
+        # Project image into RGBA space
+        # cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2BGRA)
+        # Convert from BGRA to RGBA
+        cv_img = cv_img[:, :, ::-1].copy()
+        cv_img = np.concatenate((cv_img, np.full((cv_img.shape[0], cv_img.shape[1], 1), 255)), axis=2)
+
+        # Set alpha based on segment_mask.
+        # Set red channel to 100% for viewers that don't support alpha channel.
+        cv_img[mask2 == 0] = [255, 0, 0, 0]
+
+        # Convert cv2 img back to PIL img
+        cv_img = np.uint8(cv_img)
+        img = Image.fromarray(cv_img)
+
+        # Crop cut image down to landmark rect
+        img = img.crop(rect)
+
+        # Create file-like object for passing to ColorThief
+        img_file = io.BytesIO()
+        img.save(img_file, 'PNG')
+        img_file.seek(0)
+        return img_file
 
     @staticmethod
     def calculate_se(image, colors):
@@ -129,7 +177,7 @@ class ColorCatcher(Task.Task):
         hsl_triplet = convert_color(sRGBColor(rgb_triplet[0], rgb_triplet[1], rgb_triplet[2], is_upscaled=True),
                                     HSLColor)
 
-        return Hues.get_color_name_from_hue(hsl_triplet.hsl_h)
+        return Hues.get_color_name_from_hsl(*hsl_triplet.get_value_tuple())
 
         # min_colours = {}
         # hsl_triplet.hsl_s = -0.5
@@ -147,11 +195,24 @@ class ColorCatcher(Task.Task):
         #     min_colours[d] = name
         # return min_colours[min(min_colours.keys())]
 
+    @staticmethod
+    def image_is_valid(image, quality=10):
+        width, height = image.size
+        pixels = image.getdata()
+        pixel_count = width * height
+        for i in range(0, pixel_count, quality):
+            r, g, b, a = pixels[i]
+            # If pixel is mostly opaque and not white
+            if a >= 125:
+                if not (r > 250 and g > 250 and b > 250):
+                    return True
+        return False
+
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     # img = Image.open('test.png')
     # img.show()
-    cc = ColorCatcher(1, 6, '1')
+    cc = ColorCatcher(191, 455, '1')
     cc.run()

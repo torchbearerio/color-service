@@ -10,7 +10,7 @@ def handle_task(task_input, task_token):
     cc.run()
 
 if __name__ == '__main__':
-    # handle_task({"epId": 412, "hitId": 56}, "asdf")
+    handle_task({"epId": 211, "hitId": 464}, "asdf")
     thisTask = Constants.TASK_ARNS['CV_GET_COLORS']
 
     WorkerService.start((thisTask, handle_task))

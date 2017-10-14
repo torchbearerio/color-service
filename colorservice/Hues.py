@@ -4,26 +4,46 @@ _huesByDegrees = IntervalTree()
 
 # NOTE: Ranges are inclusive of lower but exclusive of upper
 
-_huesByDegrees.addi(0, 31, 'red')
-_huesByDegrees.addi(31, 46, 'orange')
-_huesByDegrees.addi(46, 76, 'yellow')
-_huesByDegrees.addi(76, 106, 'light green')
-_huesByDegrees.addi(106, 136, 'green')
-_huesByDegrees.addi(136, 166, 'dark green')
-_huesByDegrees.addi(166, 196, 'light blue')
-_huesByDegrees.addi(196, 226, 'blue')
-_huesByDegrees.addi(226, 256, 'dark blue')
-_huesByDegrees.addi(256, 286, 'dark purple')
-_huesByDegrees.addi(286, 316, 'purple')
-_huesByDegrees.addi(316, 346, 'pink')
-_huesByDegrees.addi(346, 360, 'red')
+_huesByDegrees.addi(0, 15, 'red')
+_huesByDegrees.addi(15, 40, 'orange')
+_huesByDegrees.addi(40, 60, 'yellow')
+_huesByDegrees.addi(60, 150, 'green')
+_huesByDegrees.addi(150, 240, 'blue')
+_huesByDegrees.addi(240, 300, 'purple')
+_huesByDegrees.addi(300, 335, 'pink')
+_huesByDegrees.addi(335, 361, 'red')
 
 
-def get_color_name_from_hue(hue):
-    if _huesByDegrees.overlaps(hue):
-        color_interval_set = _huesByDegrees[hue]
+def get_color_name_from_hsl(h, s, l):
+    # If saturation is very low, then this color is gray
+    if s < 0.1:
+        return 'gray'
+
+    # If lightness is very low, this color is black
+    if l < 0.15:
+        return 'black'
+
+    # If lightness is very high, this color is white:
+    if l > 0.95:
+        return 'white'
+
+    if _huesByDegrees.overlaps(h):
+        color_interval_set = _huesByDegrees[h]
         color_interval = color_interval_set.pop()
-        return color_interval.data
+        color = color_interval.data
+
+        # Special case for brown based on saturation
+        if color == 'orange' and s < 0.50:
+            color = 'brown'
+
+        # If lightness is low, prepend 'dark'
+        if l < 0.35:
+            color = "dark {}".format(color)
+
+        if l > 0.65:
+            color = "light {}".format(color)
+
+        return color
 
     return None
 
