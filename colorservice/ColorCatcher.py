@@ -39,7 +39,7 @@ class ColorCatcher(Task.Task):
                 image = self._get_landmark_image(landmark)
 
                 # Make sure image is not entirely transparent (meaning we couldn't find a foreground object)
-                if self.image_is_valid(Image.open(image), quality=10):
+                if image and self.image_is_valid(Image.open(image), quality=10):
                     colors = self.get_dominant_colors(image)
 
                 landmark.set_colors(colors)
@@ -97,6 +97,10 @@ class ColorCatcher(Task.Task):
         img = self.streetview_images[landmark.position]
 
         rect = landmark.get_rect()
+
+        if not rect:
+            return None
+
         rect = (rect['x1'], rect['y1'], rect['x2'], rect['y2'])
 
         # Perform image segmentation to extract foreground object
