@@ -55,6 +55,9 @@ class ColorCatcher(Task.Task):
             session.rollback()
             self.send_failure('COLOR SERVICE ERROR', e.message)
 
+        finally:
+            session.close()
+
     @staticmethod
     # Image is a BytesIO file-like object. Color-Thief will open it with PIL.
     def get_dominant_colors(image):
