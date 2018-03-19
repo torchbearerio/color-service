@@ -25,8 +25,9 @@ class ColorCatcher(Task.Task):
         session = TorchbearerDB.Session()
 
         try:
-            # Get landmarks for hit
+            # Get landmarks for hit and set task start time
             hit = session.query(Hit.Hit).filter_by(hit_id=self.hit_id).one()
+            hit.set_start_time_for_task("color")
             landmarks = hit.candidate_landmarks
 
             for landmark in landmarks:
@@ -43,6 +44,8 @@ class ColorCatcher(Task.Task):
                     colors = self.get_dominant_colors(image)
 
                 landmark.set_colors(colors)
+
+            hit.set_end_time_for_task("color")
 
             # Commit DB inserts/updates
             session.commit()
