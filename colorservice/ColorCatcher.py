@@ -94,7 +94,7 @@ class ColorCatcher(Task.Task):
         client = AWSClient.get_client('s3')
         response = client.get_object(
             Bucket=Constants.S3_BUCKETS['STREETVIEW_IMAGES'],
-            Key="{}_{}.jpg".format(self.ep_id, position)
+            Key="{}_{}.jpg".format(self.hit_id, position)
         )
         return Image.open(response['Body'])
 
